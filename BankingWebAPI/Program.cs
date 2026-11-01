@@ -1,9 +1,11 @@
 using BankingWebAPI.Repository.Interfaces;
 using BankingWebAPI.Repository.Repo;
+using BankingWebAPI.Repository.Entities;
 using BankingWebAPI.Services;
 using BankingWebAPI.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Identity;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -96,6 +98,8 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+await SeedDatabaseAsync(app.Services);
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -112,3 +116,32 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+static async Task SeedDatabaseAsync(IServiceProvider services)
+{
+    using var scope = services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<BankDbContext>();
+    await db.Database.MigrateAsync();
+
+    if (!await db.AccountTypes.AnyAsync())
+    {
+        db.AccountTypes.AddRange(
+            new AccountType { AccountTypeId = 1, TypeName = "Checking", Description = "Everyday account" },
+            new AccountType { AccountTypeId = 2, TypeName = "Savings", Description = "Savings account" });
+    }
+
+    var seedAdminUsername = services.GetRequiredService<IConfiguration>()
+        ["SeedAdmin:Username"] ?? "admin";
+    var seedAdminPassword = services.GetRequiredService<IConfiguration>()
+        ["SeedAdmin:Password"];
+
+    if (!string.IsNullOrWhiteSpace(seedAdminPassword) &&
+        !await db.Users.AnyAsync(u => u.Username == seedAdminUsername))
+    {
+        var admin = new User { Username = seedAdminUsername, Role = "Admin" };
+        admin.Password = new PasswordHasher<User>().HashPassword(admin, seedAdminPassword);
+        db.Users.Add(admin);
+    }
+
+    await db.SaveChangesAsync();
+}

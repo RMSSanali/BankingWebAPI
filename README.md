@@ -11,6 +11,8 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your SQL Server 
 dotnet user-secrets set "Jwt:Key" "<use a long random secret>" --project .\BankingWebAPI\BankingWebAPI.csproj
 dotnet user-secrets set "Jwt:Issuer" "BankingWebAPI" --project .\BankingWebAPI\BankingWebAPI.csproj
 dotnet user-secrets set "Jwt:Audience" "BankingWebAPI" --project .\BankingWebAPI\BankingWebAPI.csproj
+dotnet user-secrets set "SeedAdmin:Username" "admin" --project .\BankingWebAPI\BankingWebAPI.csproj
+dotnet user-secrets set "SeedAdmin:Password" "<use a strong local password>" --project .\BankingWebAPI\BankingWebAPI.csproj
 ```
 
 The secrets are stored outside the repository and must not be committed.

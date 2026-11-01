@@ -1,5 +1,6 @@
 ﻿using BankingWebAPI.Repository.DTO;
 using BankingWebAPI.Repository.Entities;
+using BankingWebAPI.Repository.Interfaces;
 using BankingWebAPI.Services;
 using BankingWebAPI.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -16,19 +17,22 @@ namespace BankingWebAPI.Controllers
         private readonly ICustomerService _customerService;
         private readonly IAccountService _accountService;
         private readonly ILoanService _loanService;
+        private readonly IAuthenticationRepo _authenticationRepo;
 
         public AdminController(
             ICustomerService customerService,
             IAccountService accountService,
-            ILoanService loanService)
+            ILoanService loanService,
+            IAuthenticationRepo authenticationRepo)
         {
             _customerService = customerService;
             _accountService = accountService;
             _loanService = loanService;
+            _authenticationRepo = authenticationRepo;
         }
 
         [HttpPost("AddCustomer")]
-        public async Task<IActionResult> AddCustomer([FromBody] CustomerDTO dto)
+        public async Task<IActionResult> AddCustomer([FromBody] CreateCustomerDTO dto)
         {
             // Basic required checks to avoid NULL violations
             if (string.IsNullOrWhiteSpace(dto.Givenname) ||
@@ -39,6 +43,12 @@ namespace BankingWebAPI.Controllers
             {
                 return BadRequest("givenname, surname, streetaddress, city and country are required.");
             }
+
+            if (string.IsNullOrWhiteSpace(dto.Username) || dto.Password is null || dto.Password.Length < 8)
+                return BadRequest("Username is required and password must contain at least 8 characters.");
+
+            if (await _authenticationRepo.UsernameExists(dto.Username.Trim()))
+                return Conflict("Username already exists.");
 
             //// Normalize email a bit
             //var email = dto.Emailaddress?.Trim();
@@ -63,15 +73,16 @@ namespace BankingWebAPI.Controllers
                 Country = dto.Country,
                 CountryCode = "SE",                  // default; optional to expose in DTO later
                 Birthday = new DateTime(1995, 1, 1), // non-null DateTime in your entity
-                Telephonecountrycode = null,
-                Telephonenumber = null,
-                //Emailaddress = email
+                Telephonecountrycode = "",
+                Telephonenumber = "",
+                Emailaddress = dto.Emailaddress?.Trim() ?? ""
             };
 
             await _customerService.AddCustomerAsync(customer);
 
             // Create default account (OWNER disposition)
             await _accountService.CreateDefaultAccountAsync(customer.CustomerId);
+            await _authenticationRepo.CreateUser(dto.Username, dto.Password, "Customer", customer.CustomerId);
 
             return Ok(new { message = "Customer created", customerId = customer.CustomerId });
         }
