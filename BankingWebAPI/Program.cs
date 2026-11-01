@@ -126,8 +126,8 @@ static async Task SeedDatabaseAsync(IServiceProvider services)
     if (!await db.AccountTypes.AnyAsync())
     {
         db.AccountTypes.AddRange(
-            new AccountType { AccountTypeId = 1, TypeName = "Checking", Description = "Everyday account" },
-            new AccountType { AccountTypeId = 2, TypeName = "Savings", Description = "Savings account" });
+            new AccountType { TypeName = "Checking", Description = "Everyday account" },
+            new AccountType { TypeName = "Savings", Description = "Savings account" });
     }
 
     var seedAdminUsername = services.GetRequiredService<IConfiguration>()

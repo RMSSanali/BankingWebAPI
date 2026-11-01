@@ -5,4 +5,5 @@
 *.suo
 appsettings.Development.json
 TestResults/
+.dotnet-cli/
 
