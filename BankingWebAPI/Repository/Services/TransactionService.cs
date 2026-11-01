@@ -2,6 +2,7 @@
 using BankingWebAPI.Repository.Entities;
 using BankingWebAPI.Repository.Interfaces;
 using BankingWebAPI.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -12,11 +13,13 @@ namespace BankingWebAPI.Services
     {
         private readonly ITransactionRepo _transactionRepo;
         private readonly IAccountRepo _accountRepo;
+        private readonly BankDbContext _dbContext;
 
-        public TransactionService(ITransactionRepo transactionRepo, IAccountRepo accountRepo)
+        public TransactionService(ITransactionRepo transactionRepo, IAccountRepo accountRepo, BankDbContext dbContext)
         {
             _transactionRepo = transactionRepo;
             _accountRepo = accountRepo;
+            _dbContext = dbContext;
         }
 
         public async Task<IEnumerable<TransactionDTO>> GetTransactionsByAccountIdAsync(int accountId)
@@ -36,22 +39,25 @@ namespace BankingWebAPI.Services
 
         public async Task TransferBetweenAccountsAsync(int fromAccountId, int toAccountId, decimal amount)
         {
-            var fromAccount = await _accountRepo.GetAccountByIdAsync(fromAccountId);
-            var toAccount = await _accountRepo.GetAccountByIdAsync(toAccountId);
+            ValidateTransfer(fromAccountId, toAccountId, amount);
+
+            var fromAccount = await _dbContext.Accounts
+                .FirstOrDefaultAsync(a => a.AccountId == fromAccountId);
+            var toAccount = await _dbContext.Accounts
+                .FirstOrDefaultAsync(a => a.AccountId == toAccountId);
 
             if (fromAccount == null || toAccount == null)
-                throw new Exception("Account not found.");
+                throw new InvalidOperationException("Account not found.");
 
             if (fromAccount.Balance < amount)
-                throw new Exception("Insufficient balance.");
+                throw new InvalidOperationException("Insufficient balance.");
+
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
             fromAccount.Balance -= amount;
             toAccount.Balance += amount;
 
-            await _accountRepo.UpdateAccountAsync(fromAccount);
-            await _accountRepo.UpdateAccountAsync(toAccount);
-
-            await _transactionRepo.AddTransactionAsync(new Transaction
+            _dbContext.Transactions.Add(new Transaction
             {
                 AccountId = fromAccountId,
                 Date = DateTime.UtcNow.Date,
@@ -61,7 +67,7 @@ namespace BankingWebAPI.Services
                 Balance = fromAccount.Balance
             });
 
-            await _transactionRepo.AddTransactionAsync(new Transaction
+            _dbContext.Transactions.Add(new Transaction
             {
                 AccountId = toAccountId,
                 Date = DateTime.UtcNow.Date,
@@ -70,11 +76,25 @@ namespace BankingWebAPI.Services
                 Amount = amount,
                 Balance = toAccount.Balance
             });
+
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
 
         public async Task TransferToAnotherCustomerAsync(int fromAccountId, int toAccountNumber, decimal amount)
         {
+            ValidateTransfer(fromAccountId, toAccountNumber, amount);
             await TransferBetweenAccountsAsync(fromAccountId, toAccountNumber, amount);
+        }
+
+        private static void ValidateTransfer(int fromAccountId, int toAccountId, decimal amount)
+        {
+            if (fromAccountId <= 0 || toAccountId <= 0)
+                throw new ArgumentException("Account IDs must be greater than zero.");
+            if (fromAccountId == toAccountId)
+                throw new ArgumentException("Source and destination accounts must be different.");
+            if (amount <= 0)
+                throw new ArgumentException("Transfer amount must be greater than zero.");
         }
     }
 }

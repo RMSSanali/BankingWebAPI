@@ -66,8 +66,14 @@ namespace BankingWebAPI.Controllers
                 !await _accountService.IsOwnedByCustomerAsync(transferDTO.ToAccountId, customerId))
                 return Forbid();
 
-            await _transactionService.TransferBetweenAccountsAsync(transferDTO.FromAccountId, transferDTO.ToAccountId, transferDTO.Amount);
-            return Ok(new { message = "Transfer successful." });
+            try
+            {
+                await _transactionService.TransferBetweenAccountsAsync(
+                    transferDTO.FromAccountId, transferDTO.ToAccountId, transferDTO.Amount);
+                return Ok(new { message = "Transfer successful." });
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
         }
 
         // 5) Transfer to Another Customer
@@ -79,8 +85,14 @@ namespace BankingWebAPI.Controllers
                 !await _accountService.IsOwnedByCustomerAsync(transferDTO.FromAccountId, customerId))
                 return Forbid();
 
-            await _transactionService.TransferToAnotherCustomerAsync(transferDTO.FromAccountId, transferDTO.ToAccountNumber, transferDTO.Amount);
-            return Ok(new { message = "Transfer to customer successful." });
+            try
+            {
+                await _transactionService.TransferToAnotherCustomerAsync(
+                    transferDTO.FromAccountId, transferDTO.ToAccountNumber, transferDTO.Amount);
+                return Ok(new { message = "Transfer to customer successful." });
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
         }
     }
 }
