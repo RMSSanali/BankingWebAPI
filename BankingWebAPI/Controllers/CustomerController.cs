@@ -34,10 +34,13 @@ namespace BankingWebAPI.Controllers
         }
 
         // 2) Get Transactions for an Account
-        // (Optional: add an ownership check to ensure the account belongs to this customer)
         [HttpGet("Transactions/{accountId}")]
         public async Task<IActionResult> GetTransactions(int accountId)
         {
+            var customerId = GetCustomerIdFromToken();
+            if (customerId == 0 || !await _accountService.IsOwnedByCustomerAsync(accountId, customerId))
+                return Forbid();
+
             var transactions = await _transactionService.GetTransactionsByAccountIdAsync(accountId);
             return Ok(transactions);
         }
@@ -54,19 +57,28 @@ namespace BankingWebAPI.Controllers
         }
 
         // 4) Transfer Between Accounts
-        // (Optional: add ownership check for transferDTO.FromAccountId)
         [HttpPost("TransferBetweenAccounts")]
         public async Task<IActionResult> TransferBetweenAccounts([FromBody] TransferDTO transferDTO)
         {
+            var customerId = GetCustomerIdFromToken();
+            if (customerId == 0 ||
+                !await _accountService.IsOwnedByCustomerAsync(transferDTO.FromAccountId, customerId) ||
+                !await _accountService.IsOwnedByCustomerAsync(transferDTO.ToAccountId, customerId))
+                return Forbid();
+
             await _transactionService.TransferBetweenAccountsAsync(transferDTO.FromAccountId, transferDTO.ToAccountId, transferDTO.Amount);
             return Ok(new { message = "Transfer successful." });
         }
 
         // 5) Transfer to Another Customer
-        // (Optional: add ownership check for transferDTO.FromAccountId)
         [HttpPost("TransferToCustomer")]
         public async Task<IActionResult> TransferToCustomer([FromBody] TransferToCustomerDTO transferDTO)
         {
+            var customerId = GetCustomerIdFromToken();
+            if (customerId == 0 ||
+                !await _accountService.IsOwnedByCustomerAsync(transferDTO.FromAccountId, customerId))
+                return Forbid();
+
             await _transactionService.TransferToAnotherCustomerAsync(transferDTO.FromAccountId, transferDTO.ToAccountNumber, transferDTO.Amount);
             return Ok(new { message = "Transfer to customer successful." });
         }

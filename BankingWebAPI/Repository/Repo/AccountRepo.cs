@@ -54,6 +54,10 @@ namespace BankingWebAPI.Repository.Repo
                 .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.AccountId == accountId);
 
+        public Task<bool> IsOwnedByCustomerAsync(int accountId, int customerId)
+            => _dbContext.Dispositions.AnyAsync(d =>
+                d.AccountId == accountId && d.CustomerId == customerId && d.Type == "OWNER");
+
         public async Task AddAccountAsync(Account account)
         {
             await _dbContext.Accounts.AddAsync(account);

@@ -43,5 +43,8 @@ namespace BankingWebAPI.Services
             account.Balance += amount;
             await _accountRepo.UpdateAccountAsync(account);
         }
+
+        public Task<bool> IsOwnedByCustomerAsync(int accountId, int customerId)
+            => _accountRepo.IsOwnedByCustomerAsync(accountId, customerId);
     }
 }

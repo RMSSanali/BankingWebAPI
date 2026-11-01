@@ -8,5 +8,6 @@ namespace BankingWebAPI.Services.Interfaces
         Task CreateAccountAsync(int customerId, int accountTypeId, decimal initialDeposit);
         Task CreateDefaultAccountAsync(int customerId);
         Task DepositToAccountAsync(int accountId, decimal amount);
+        Task<bool> IsOwnedByCustomerAsync(int accountId, int customerId);
     }
 }

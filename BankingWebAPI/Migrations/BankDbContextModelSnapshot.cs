@@ -29,20 +29,25 @@ namespace BankingWebAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AccountId"));
 
-                    b.Property<int>("AccountTypeId")
-                        .HasColumnType("int");
+                    b.Property<int?>("AccountTypeId")
+                        .HasColumnType("int")
+                        .HasColumnName("AccountTypesId");
 
                     b.Property<decimal>("Balance")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("AccountId");
 
                     b.HasIndex("AccountTypeId");
 
-                    b.ToTable("Accounts");
+                    b.ToTable("Accounts", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.AccountType", b =>
@@ -62,7 +67,7 @@ namespace BankingWebAPI.Migrations
 
                     b.HasKey("AccountTypeId");
 
-                    b.ToTable("AccountType");
+                    b.ToTable("AccountTypes", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.Card", b =>
@@ -78,6 +83,10 @@ namespace BankingWebAPI.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CCType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CVV2")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -101,7 +110,7 @@ namespace BankingWebAPI.Migrations
 
                     b.HasIndex("DispositionId");
 
-                    b.ToTable("Cards");
+                    b.ToTable("Cards", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.Customer", b =>
@@ -161,7 +170,7 @@ namespace BankingWebAPI.Migrations
 
                     b.HasKey("CustomerId");
 
-                    b.ToTable("Customers");
+                    b.ToTable("Customers", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.Disposition", b =>
@@ -188,7 +197,7 @@ namespace BankingWebAPI.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("Dispositions");
+                    b.ToTable("Dispositions", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.Loan", b =>
@@ -199,14 +208,20 @@ namespace BankingWebAPI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LoanId"));
 
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Duration")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("Payments")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -214,7 +229,9 @@ namespace BankingWebAPI.Migrations
 
                     b.HasKey("LoanId");
 
-                    b.ToTable("Loans");
+                    b.HasIndex("AccountId");
+
+                    b.ToTable("Loans", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.Transaction", b =>
@@ -231,11 +248,15 @@ namespace BankingWebAPI.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<decimal>("BalanceAfterTransaction")
+                    b.Property<decimal>("Balance")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -245,7 +266,7 @@ namespace BankingWebAPI.Migrations
 
                     b.HasIndex("AccountId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.User", b =>
@@ -255,6 +276,9 @@ namespace BankingWebAPI.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Password")
                         .IsRequired()
@@ -270,7 +294,7 @@ namespace BankingWebAPI.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", "dbo");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.Account", b =>
@@ -278,8 +302,7 @@ namespace BankingWebAPI.Migrations
                     b.HasOne("BankingWebAPI.Repository.Entities.AccountType", "AccountType")
                         .WithMany("Accounts")
                         .HasForeignKey("AccountTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasConstraintName("FK_Accounts_AccountTypes");
 
                     b.Navigation("AccountType");
                 });
@@ -290,7 +313,8 @@ namespace BankingWebAPI.Migrations
                         .WithMany("Cards")
                         .HasForeignKey("DispositionId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_Cards_Dispositions");
 
                     b.Navigation("Disposition");
                 });
@@ -301,17 +325,29 @@ namespace BankingWebAPI.Migrations
                         .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_Dispositions_Accounts");
 
                     b.HasOne("BankingWebAPI.Repository.Entities.Customer", "Customer")
                         .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_Dispositions_Customers");
 
                     b.Navigation("Account");
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("BankingWebAPI.Repository.Entities.Loan", b =>
+                {
+                    b.HasOne("BankingWebAPI.Repository.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_Loans_Accounts");
                 });
 
             modelBuilder.Entity("BankingWebAPI.Repository.Entities.Transaction", b =>
@@ -320,7 +356,8 @@ namespace BankingWebAPI.Migrations
                         .WithMany("Transactions")
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("FK_Transactions_Accounts");
 
                     b.Navigation("Account");
                 });
