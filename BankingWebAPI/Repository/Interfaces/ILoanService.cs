@@ -7,6 +7,6 @@ namespace BankingWebAPI.Services
 {
     public interface ILoanService
     {
-        Task AddLoanAsync(Loan loan); // Correctly typed Task and proper interface declaration
+        Task<int> AddLoanAsync(int customerId, decimal amount, int duration);
     }
 }

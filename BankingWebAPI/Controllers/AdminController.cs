@@ -94,8 +94,24 @@ namespace BankingWebAPI.Controllers
         [HttpPost("AddLoan")]
         public async Task<IActionResult> AddLoan([FromBody] LoanDTO loanDTO)
         {
-            // Add loan logic
-            return Ok();
+            if (loanDTO.CustomerId <= 0 || loanDTO.Amount <= 0 || loanDTO.Duration <= 0)
+                return BadRequest("CustomerId, Amount and Duration must be greater than zero.");
+
+            try
+            {
+                var loanId = await _loanService.AddLoanAsync(
+                    loanDTO.CustomerId, loanDTO.Amount, loanDTO.Duration);
+
+                return Ok(new { message = "Loan created successfully.", loanId });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }
